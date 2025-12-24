@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repo Recommender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            font-size: 1.1rem;
+        }
+
+        .search-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+
+        .btn-primary:disabled {
+            background: #1a3d1e;
+            cursor: not-allowed;
+        }
+
+        .filters-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .filters-header h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #c9d1d9;
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            border-color: #8b949e;
+            color: #c9d1d9;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .filter-chip:hover {
+            border-color: #58a6ff;
+        }
+
+        .filter-chip.active {
+            background: rgba(88, 166, 255, 0.1);
+            border-color: #58a6ff;
+        }
+
+        .filter-chip input {
+            display: none;
+        }
+
+        .filter-chip .check {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #30363d;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .filter-chip.active .check {
+            background: #58a6ff;
+            border-color: #58a6ff;
+        }
+
+        .filter-chip.active .check::after {
+            content: '✓';
+            color: #0d1117;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .results-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .results-header h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .results-count {
+            color: #8b949e;
+            font-size: 0.875rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 14px 20px;
+            background: #21262d;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #8b949e;
+            border-bottom: 1px solid #30363d;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #21262d;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(177, 186, 196, 0.04);
+        }
+
+        .repo-name {
+            font-weight: 600;
+            color: #58a6ff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .repo-name:hover {
+            text-decoration: underline;
+        }
+
+        .repo-name svg {
+            flex-shrink: 0;
+        }
+
+        .repo-description {
+            color: #8b949e;
+            font-size: 0.9rem;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+
+        .repo-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.875rem;
+            color: #8b949e;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .language-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .stars {
+            color: #e3b341;
+        }
+
+        .forks {
+            color: #8b949e;
+        }
+
+        .updated {
+            font-size: 0.875rem;
+            color: #8b949e;
+        }
+
+        .topic-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: rgba(88, 166, 255, 0.15);
+            color: #58a6ff;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #8b949e;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .error-message {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid rgba(248, 81, 73, 0.4);
+            color: #f85149;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 20px;
+            border-top: 1px solid #30363d;
+        }
+
+        .page-btn {
+            padding: 8px 14px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #30363d;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #8b949e;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .search-row {
+                flex-direction: column;
+            }
+
+            .input-group {
+                min-width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            th, td {
+                padding: 12px;
+            }
+
+            .repo-meta {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+        }
+
+        .loading-text {
+            color: #8b949e;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GitHub Repo Recommender</h1>
+            <p class="subtitle">Discover top repositories by category, language, or search query</p>
+        </header>
+
+        <section class="search-section">
+            <div class="search-row">
+                <div class="input-group">
+                    <label for="searchQuery">Search Repositories</label>
+                    <input type="text" id="searchQuery" placeholder="Enter keywords (e.g., machine learning, web framework)...">
+                </div>
+                <button class="btn btn-primary" id="searchBtn" onclick="searchRepos()">
+                    Search
+                </button>
+            </div>
+        </section>
+
+        <section class="filters-section">
+            <div class="filters-header">
+                <h3>Category Filters</h3>
+                <button class="clear-btn" onclick="clearCategoryFilters()">Clear All</button>
+            </div>
+            <div class="filter-grid" id="categoryFilters"></div>
+        </section>
+
+        <section class="filters-section">
+            <div class="filters-header">
+                <h3>Programming Languages</h3>
+                <button class="clear-btn" onclick="clearLanguageFilters()">Clear All</button>
+            </div>
+            <div class="filter-grid" id="languageFilters"></div>
+        </section>
+
+        <section class="results-section">
+            <div class="results-header">
+                <h3>Recommended Repositories</h3>
+                <span class="results-count" id="resultsCount"></span>
+            </div>
+            <div id="resultsContainer"></div>
+        </section>
+    </div>
+
+    <script>
+        const categories = [
+            { id: 'web', name: 'Web Development' },
+            { id: 'mobile', name: 'Mobile Development' },
+            { id: 'ai', name: 'Artificial Intelligence' },
+            { id: 'ml', name: 'Machine Learning' },
+            { id: 'data', name: 'Data Science' },
+            { id: 'devops', name: 'DevOps' },
+            { id: 'security', name: 'Cybersecurity' },
+            { id: 'blockchain', name: 'Blockchain' },
+            { id: 'game', name: 'Game Development' },
+            { id: 'api', name: 'API & Backend' },
+            { id: 'cli', name: 'CLI Tools' },
+            { id: 'desktop', name: 'Desktop Apps' }
+        ];
+
+        const languages = [
+            { id: 'javascript', name: 'JavaScript', color: '#f1e05a' },
+            { id: 'typescript', name: 'TypeScript', color: '#3178c6' },
+            { id: 'python', name: 'Python', color: '#3572A5' },
+            { id: 'java', name: 'Java', color: '#b07219' },
+            { id: 'go', name: 'Go', color: '#00ADD8' },
+            { id: 'rust', name: 'Rust', color: '#dea584' },
+            { id: 'cpp', name: 'C++', color: '#f34b7d' },
+            { id: 'c', name: 'C', color: '#555555' },
+            { id: 'ruby', name: 'Ruby', color: '#701516' },
+            { id: 'php', name: 'PHP', color: '#4F5D95' },
+            { id: 'swift', name: 'Swift', color: '#F05138' },
+            { id: 'kotlin', name: 'Kotlin', color: '#A97BFF' }
+        ];
+
+        let selectedCategories = new Set();
+        let selectedLanguages = new Set();
+        let currentPage = 1;
+        const perPage = 20;
+        let totalResults = 0;
+
+        function init() {
+            renderCategoryFilters();
+            renderLanguageFilters();
+            loadInitialRepos();
+        }
+
+        function renderCategoryFilters() {
+            const container = document.getElementById('categoryFilters');
+            container.innerHTML = categories.map(cat => `
+                <label class="filter-chip ${selectedCategories.has(cat.id) ? 'active' : ''}">
+                    <input type="checkbox" ${selectedCategories.has(cat.id) ? 'checked' : ''}
+                           onchange="toggleCategory('${cat.id}')">
+                    <span class="check"></span>
+                    <span>${cat.name}</span>
+                </label>
+            `).join('');
+        }
+
+        function renderLanguageFilters() {
+            const container = document.getElementById('languageFilters');
+            container.innerHTML = languages.map(lang => `
+                <label class="filter-chip ${selectedLanguages.has(lang.id) ? 'active' : ''}">
+                    <input type="checkbox" ${selectedLanguages.has(lang.id) ? 'checked' : ''}
+                           onchange="toggleLanguage('${lang.id}')">
+                    <span class="check"></span>
+                    <span class="dot" style="background: ${lang.color}"></span>
+                    <span>${lang.name}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleCategory(id) {
+            if (selectedCategories.has(id)) {
+                selectedCategories.delete(id);
+            } else {
+                selectedCategories.add(id);
+            }
+            renderCategoryFilters();
+            currentPage = 1;
+            searchRepos();
+        }
+
+        function toggleLanguage(id) {
+            if (selectedLanguages.has(id)) {
+                selectedLanguages.delete(id);
+            } else {
+                selectedLanguages.add(id);
+            }
+            renderLanguageFilters();
+            currentPage = 1;
+            searchRepos();
+        }
+
+        function clearCategoryFilters() {
+            selectedCategories.clear();
+            renderCategoryFilters();
+            currentPage = 1;
+            searchRepos();
+        }
+
+        function clearLanguageFilters() {
+            selectedLanguages.clear();
+            renderLanguageFilters();
+            currentPage = 1;
+            searchRepos();
+        }
+
+        function buildQuery() {
+            const queryInput = document.getElementById('searchQuery').value.trim();
+            let query = '';
+
+            if (queryInput) {
+                query = queryInput;
+            }
+
+            if (selectedLanguages.size > 0) {
+                const langList = Array.from(selectedLanguages).join('+language:');
+                query += (query ? ' ' : '') + `language:${langList}`;
+            }
+
+            return query || 'stars:>10000';
+        }
+
+        async function searchRepos() {
+            const container = document.getElementById('resultsContainer');
+            const searchBtn = document.getElementById('searchBtn');
+
+            container.innerHTML = `
+                <div class="loading">
+                    <div>
+                        <div class="spinner"></div>
+                        <p class="loading-text">Fetching repositories...</p>
+                    </div>
+                </div>
+            `;
+            searchBtn.disabled = true;
+
+            try {
+                const query = buildQuery();
+                const encodedQuery = encodeURIComponent(`${query} sort:stars`);
+                const pageParam = `page=${currentPage}&per_page=${perPage}`;
+
+                const response = await fetch(`https://api.github.com/search/repositories?${pageParam}&q=${encodedQuery}`);
+
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Rate limit exceeded. Please try again later.');
+                    }
+                    throw new Error('Failed to fetch repositories');
+                }
+
+                const data = await response.json();
+                totalResults = Math.min(data.total_count, 1000);
+                renderResults(data.items);
+                document.getElementById('resultsCount').textContent =
+                    `${totalResults.toLocaleString()} repositories found`;
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+
+        function renderResults(repos) {
+            const container = document.getElementById('resultsContainer');
+
+            if (!repos || repos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <p>No repositories found. Try adjusting your filters or search query.</p>
+                    </div>
+                `;
+                document.getElementById('resultsCount').textContent = '0 repositories found';
+                return;
+            }
+
+            const langColors = {};
+            languages.forEach(l => langColors[l.id.toLowerCase()] = l.color);
+
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Repository</th>
+                                <th>Description</th>
+                                <th>Stars</th>
+                                <th>Forks</th>
+                                <th>Language</th>
+                                <th>Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            repos.forEach(repo => {
+                const langColor = langColors[repo.language?.toLowerCase()] || '#8b949e';
+                const topics = repo.topics?.slice(0, 3).map(t => `<span class="topic-badge">${t}</span>`).join('') || '';
+
+                html += `
+                    <tr>
+                        <td>
+                            <a href="${repo.html_url}" target="_blank" class="repo-name">
+                                <svg height="16" viewBox="0 0 16 16" width="16" fill="currentColor">
+                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"/>
+                                </svg>
+                                <span>${repo.full_name}</span>
+                            </a>
+                            ${topics}
+                        </td>
+                        <td>
+                            <div class="repo-description">
+                                ${repo.description || 'No description available'}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="stars">★ ${formatNumber(repo.stargazers_count)}</span>
+                        </td>
+                        <td>
+                            <span class="forks">${formatNumber(repo.forks_count)}</span>
+                        </td>
+                        <td>
+                            <div class="meta-item">
+                                <span class="language-dot" style="background: ${langColor}"></span>
+                                <span>${repo.language || 'Unknown'}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="updated">${formatDate(repo.updated_at)}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+
+            if (totalResults > perPage) {
+                html += renderPagination();
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderPagination() {
+            const totalPages = Math.ceil(totalResults / perPage);
+            return `
+                <div class="pagination">
+                    <button class="page-btn" onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+                        ← Previous
+                    </button>
+                    <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+                    <button class="page-btn" onclick="changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''}>
+                        Next →
+                    </button>
+                </div>
+            `;
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            searchRepos();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 30) return `${diffDays} days ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            return `${Math.floor(diffDays / 365)} years ago`;
+        }
+
+        function loadInitialRepos() {
+            searchRepos();
+        }
+
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchRepos();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
